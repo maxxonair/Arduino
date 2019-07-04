@@ -1,0 +1,183 @@
+
+//----------------------------------------------------------------------------------------------
+//
+//                                   Watering script Mark II 
+//
+//----------------------------------------------------------------------------------------------
+#include <DS3231.h>
+
+// Init the DS3231 using the hardware interface
+DS3231  rtc(SDA, SCL);
+Time t; 
+
+const int button_plus  = 2;
+const int button_minus = 3;
+const int button_MenuForward  = 4;
+const int button_MenuBackward = 5;
+
+int val           = 0;
+int menu          = 0;
+int NR_menu       = 6;
+int OnHour_01_old = 0;
+int OnHour_02_old = 0;
+int OnMin_01_old  = 0;
+int OnMin_02_old  = 0;
+int WateringTime_01_old=0;
+int WateringTime_02_old=0;
+int menu_old = 0; 
+
+ int OnHour_01 =  8;
+ int OnHour_02 = 20;
+ //int OnHour_03 = 15; 
+
+ int OnMin_01 = 30; 
+ int OnMin_02 = 30;
+
+const int OnSec = 0;
+
+int Relay = 6;
+
+ int WateringTime_01 = 2; // [s]
+ int WateringTime_02 = 2; // [s]
+
+ const int delay_nominal = 1000;
+const int delay_long    = 5000; 
+ int delay_is      = 0; 
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(button_plus, INPUT);
+  pinMode(button_minus, INPUT);
+  pinMode(button_MenuForward, INPUT);
+  pinMode(button_MenuBackward, INPUT);
+}
+void watering_morning(){
+      digitalWrite(Relay,LOW);
+      Serial.println("Pump: ON"); 
+      delay(WateringTime_01*1000);
+      digitalWrite(Relay,HIGH);
+      Serial.println("Pump: OFF"); 
+}
+void watering_evening(){
+      digitalWrite(Relay,LOW);
+      Serial.println("Pump: ON"); 
+      delay(WateringTime_02*1000);
+      digitalWrite(Relay,HIGH);
+      Serial.println("Pump: OFF"); 
+}
+void lcd_menu_00(){
+   //Serial.print(rtc.getDOWStr());
+   Serial.print(" ");
+  // Send date
+  // Serial.print(rtc.getDateStr());
+   Serial.print(" -- ");
+  // Send time
+ // Serial.println(rtc.getTimeStr());
+  Serial.print(" - Gartenwaesserer Braun \r\n");
+}
+void lcd_menu_hour_01(){
+  Serial.print("Menu ");
+  Serial.println(menu);
+  Serial.print(" - Set Water hour morning: ");
+  Serial.println(OnHour_01);
+}
+void lcd_menu_hour_02(){
+  Serial.print("Main Menu - Set Water hour evening: ");
+  Serial.println(OnHour_02);
+}
+void lcd_menu_minute_01(){
+  Serial.print("Main Menu - Set Water minute morning: ");
+  Serial.println(OnMin_01);
+}
+void lcd_menu_minute_02(){
+  Serial.print("Main Menu - Set Water minute evening: ");
+  Serial.println(OnMin_02);
+}
+void lcd_menu_watertime_01(){
+  Serial.print("Main Menu - Set Watering time morning (sec): ");
+  Serial.println(WateringTime_01);
+}
+void lcd_menu_watertime_02(){
+  Serial.print("Main Menu - Set Watering time evening (sec): ");
+  Serial.println(WateringTime_02);
+}
+  boolean AnyVariableChange(){
+  if(OnHour_01_old != OnHour_01 || OnHour_02_old != OnHour_02 ||  OnMin_01_old != OnMin_01 || OnMin_02_old != OnMin_01 || WateringTime_01_old != WateringTime_01 || WateringTime_02_old != WateringTime_02 || menu_old != menu){
+  OnHour_01_old=OnHour_01;
+  OnHour_02_old=OnHour_02;
+  OnMin_01_old=OnMin_01;
+  OnMin_02_old=OnMin_02;
+  WateringTime_01_old=WateringTime_01;
+  WateringTime_02_old=WateringTime_02;
+  menu_old=menu; 
+    return true;
+  } else {
+    return false;
+  }
+}
+void UpDownSelect(){
+   if(menu==1) {
+          if(digitalRead(button_plus) == HIGH){OnHour_01++;delay(300);}
+      else if(digitalRead(button_minus) == HIGH){OnHour_01--;delay(300);}
+  } else if (menu == 2){
+              if(digitalRead(button_plus) == HIGH){OnMin_01++;delay(300);}
+      else if(digitalRead(button_minus) == HIGH){OnMin_01--;delay(300);}
+  } else if (menu==3){
+               if(digitalRead(button_plus) == HIGH){WateringTime_01++;delay(300);}
+      else if(digitalRead(button_minus) == HIGH){WateringTime_01--;delay(300);}   
+  } else if (menu==4){
+              if(digitalRead(button_plus) == HIGH){OnHour_02++;delay(300);}
+      else if(digitalRead(button_minus) == HIGH){OnHour_02--;delay(300);}
+  } else if (menu==5){
+                  if(digitalRead(button_plus) == HIGH){OnMin_02++;delay(300);}
+      else if(digitalRead(button_minus) == HIGH){OnMin_02--;delay(300);}
+  } else if (menu==6){
+                   if(digitalRead(button_plus) == HIGH){WateringTime_02++;delay(300);}
+      else if(digitalRead(button_minus) == HIGH){WateringTime_02--;delay(300);} 
+  } 
+//------------------------------------------------------------------
+    // Menu frame condition (all variables):
+      if(OnHour_01>24){OnHour_01=0;} else if(OnHour_01<0){OnHour_01=24;}
+      if(OnHour_02>24){OnHour_02=0;} else if(OnHour_02<0){OnHour_02=24;}
+      if(OnMin_01>60){OnMin_01=0;} else if(OnMin_01<0){OnMin_01=59;}
+      if(OnMin_02>60){OnMin_02=0;} else if(OnMin_02<0){OnMin_02=59;}      
+   if(menu>NR_menu){menu=0;} else if(menu<0){menu=NR_menu;}
+}
+void DisplayOutput(){
+    if(AnyVariableChange()){
+           if (menu==0) {lcd_menu_00();}
+      else if (menu==1) {lcd_menu_hour_01();}
+      else if (menu==2) {lcd_menu_minute_01();}
+      else if (menu==3) {lcd_menu_watertime_01();}
+      else if (menu==4) {lcd_menu_hour_02();}
+      else if (menu==5) {lcd_menu_minute_02();}
+      else if (menu==6) {lcd_menu_watertime_02();}
+  }
+}
+void loop() {
+    // Read selected menu from Menu Button: 
+    if(digitalRead(button_MenuForward) == HIGH){menu++;delay(300);}
+  else if(digitalRead(button_MenuBackward) == HIGH){menu--;delay(300);}
+  // Read value input from plus/minus buttons: 
+      UpDownSelect();
+  
+ // Autoselect: Display output
+     DisplayOutput();
+  delay(200);
+  
+  // Convert time seconds to milliseconds!!
+  // Watering and timer functions: 
+   // t = rtc.getTime();
+  
+    if(t.hour == OnHour_01 && t.min == OnMin_01 && t.sec == OnSec){
+    watering_morning();
+    delay_is = delay_long; 
+    } else if (t.hour == OnHour_02 && t.min == OnMin_02 && t.sec == OnSec){
+    watering_evening();
+    delay_is = delay_long; 
+    } else {
+    digitalWrite(Relay,HIGH);
+    delay_is = delay_nominal;   
+    }
+}
