@@ -1,11 +1,17 @@
 
+
+
 //----------------------------------------------------------------------------------------------
 //
 //                                   Watering script Mark II 
 //
 //----------------------------------------------------------------------------------------------
 #include <DS3231.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
 
+
+LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
 Time t; 
@@ -14,6 +20,7 @@ const int button_plus  = 2;
 const int button_minus = 3;
 const int button_MenuForward  = 4;
 const int button_MenuBackward = 5;
+
 
 int val           = 0;
 int menu          = 0;
@@ -26,6 +33,7 @@ int WateringTime_01_old=0;
 int WateringTime_02_old=0;
 int menu_old = 0; 
 
+double lcd_time=0; 
  int OnHour_01 =  8;
  int OnHour_02 = 20;
  //int OnHour_03 = 15; 
@@ -50,7 +58,11 @@ void setup() {
   pinMode(button_plus, INPUT);
   pinMode(button_minus, INPUT);
   pinMode(button_MenuForward, INPUT);
-  pinMode(button_MenuBackward, INPUT);
+
+
+  lcd.init();                      // initialize the lcd 
+
+  rtc.begin();
 }
 void watering_morning(){
       digitalWrite(Relay,LOW);
@@ -67,40 +79,77 @@ void watering_evening(){
       Serial.println("Pump: OFF"); 
 }
 void lcd_menu_00(){
+   lcd.backlight();
+   lcd.clear();
+     lcd.setCursor(0,0);
    //Serial.print(rtc.getDOWStr());
-   Serial.print(" ");
+  // lcd.print(" ");
   // Send date
-  // Serial.print(rtc.getDateStr());
-   Serial.print(" -- ");
+  //lcd.print(rtc.getDateStr());
+  // lcd.print("-");
   // Send time
- // Serial.println(rtc.getTimeStr());
-  Serial.print(" - Gartenwaesserer Braun \r\n");
+ lcd.print(rtc.getTimeStr());
+ lcd.setCursor(0,1);
+  lcd.print("Garten Braun ");
 }
 void lcd_menu_hour_01(){
-  Serial.print("Menu ");
-  Serial.println(menu);
-  Serial.print(" - Set Water hour morning: ");
-  Serial.println(OnHour_01);
+     lcd.backlight();
+     lcd.clear();
+     lcd.setCursor(0,0);
+  lcd.print("Menu ");
+  lcd.print(menu);
+  lcd.setCursor(0,1);
+  lcd.print("H morning: ");
+  lcd.print(OnHour_01);
 }
 void lcd_menu_hour_02(){
-  Serial.print("Main Menu - Set Water hour evening: ");
-  Serial.println(OnHour_02);
+       lcd.backlight();
+       lcd.clear();
+     lcd.setCursor(0,0);
+       lcd.print("Menu ");
+  lcd.print(menu);
+  lcd.setCursor(0,1);
+  lcd.print("H evening: ");
+  lcd.print(OnHour_02);
 }
 void lcd_menu_minute_01(){
-  Serial.print("Main Menu - Set Water minute morning: ");
-  Serial.println(OnMin_01);
+       lcd.backlight();
+     lcd.setCursor(0,0);
+       lcd.print("Menu ");
+  lcd.print(menu);
+  lcd.setCursor(0,1);
+  lcd.print("Min morning: ");
+  lcd.print(OnMin_01);
 }
 void lcd_menu_minute_02(){
-  Serial.print("Main Menu - Set Water minute evening: ");
-  Serial.println(OnMin_02);
+       lcd.backlight();
+       lcd.clear();
+     lcd.setCursor(0,0);
+       lcd.print("Menu ");
+  lcd.print(menu);
+  lcd.setCursor(0,1);
+  lcd.print("Min evening: ");
+  lcd.print(OnMin_02);
 }
 void lcd_menu_watertime_01(){
-  Serial.print("Main Menu - Set Watering time morning (sec): ");
-  Serial.println(WateringTime_01);
+       lcd.backlight();
+       lcd.clear();
+     lcd.setCursor(0,0);
+       lcd.print("Menu ");
+  lcd.print(menu);
+  lcd.setCursor(0,1);
+  lcd.print("T morning: ");
+  lcd.print(WateringTime_01);
 }
 void lcd_menu_watertime_02(){
-  Serial.print("Main Menu - Set Watering time evening (sec): ");
-  Serial.println(WateringTime_02);
+       lcd.backlight();
+       lcd.clear();
+     lcd.setCursor(0,0);
+            lcd.print("Menu ");
+  lcd.print(menu);
+       lcd.setCursor(0,1);
+  lcd.print("T evening: ");
+  lcd.print(WateringTime_02);
 }
   boolean AnyVariableChange(){
   if(OnHour_01_old != OnHour_01 || OnHour_02_old != OnHour_02 ||  OnMin_01_old != OnMin_01 || OnMin_02_old != OnMin_01 || WateringTime_01_old != WateringTime_01 || WateringTime_02_old != WateringTime_02 || menu_old != menu){
@@ -112,8 +161,21 @@ void lcd_menu_watertime_02(){
   WateringTime_02_old=WateringTime_02;
   menu_old=menu; 
     return true;
+  } else if(menu==0){
+    return true;
+    delay(500);
   } else {
     return false;
+  }
+}
+void DisplayTimeout(double t_set){
+  if(menu==menu_old){
+    lcd_time=lcd_time+0.2;
+  }else {
+    lcd_time=0;
+  }
+  if(lcd_time>t_set){
+    lcd.noBacklight();
   }
 }
 void UpDownSelect(){
@@ -161,7 +223,9 @@ void loop() {
   else if(digitalRead(button_MenuBackward) == HIGH){menu--;delay(300);}
   // Read value input from plus/minus buttons: 
       UpDownSelect();
-  
+
+  // Display Backlight timeout after set seconds without change:
+     DisplayTimeout(60);
  // Autoselect: Display output
      DisplayOutput();
   delay(200);

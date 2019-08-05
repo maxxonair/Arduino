@@ -44,16 +44,16 @@
 DS3231  rtc(SDA, SCL);
 Time t; 
 
-const int OnHour_01 = 13;
+const int OnHour_01 = 16;
 const int OnHour_02 = 20;
 const int OnHour_03 = 15; 
 
-const int OnMin = 33; 
-const int OnSec = 10;
+const int OnMin = 10; 
+const int OnSec = 20;
 
 int Relay = 6;
 
-const int WateringTime = 2000; // [ms]
+const int WateringTime = 5000; // [ms]
 
 const int delay_nominal = 1000;
 const int delay_long    = 5000; 
