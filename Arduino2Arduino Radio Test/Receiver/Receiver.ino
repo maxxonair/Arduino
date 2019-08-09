@@ -3,7 +3,7 @@
 #include "RF24.h"
 
 //Servo myservo;
-const int green = 5;
+const int green = 6;
 //SCK -> 13//MISO -> 12//MOSI -> 11//CSN -> 7//CE -> 8
 RF24 radio(8,7);
 const uint64_t pipe = 0xE8E8F0F0E1LL;
@@ -20,10 +20,10 @@ Serial.begin(115200);
 void GREENLOW(){
   digitalWrite(green, LOW);
 }
-void GREENHIGH(double t){
+void GREENHIGH(){
   digitalWrite(green, HIGH);
-  delay(20);
-  digitalWrite(green, LOW);
+ // delay(20);
+ // digitalWrite(green, LOW);
 }
 
 void loop(){
@@ -31,13 +31,17 @@ void loop(){
 if (radio.available()){
     while (radio.available()){
       radio.read(msg, 1);
+      //radio.read(msg, 2);
       Serial.print(msg[0]);
+      //Serial.print("\t");
+      //Serial.print(msg[1]);
      // Serial.print("\n");
       //myservo.write (msg[0]);
-      if(msg[0]>90){
+      if(msg[0]>0){
         double val = msg[0];
-        double t = val/8;
-        GREENHIGH(t);
+        //double val2 = msg[1];
+        //double t = val/8;
+        GREENHIGH();
         Serial.print("lights ON");
         Serial.print("\n");
       } else {
