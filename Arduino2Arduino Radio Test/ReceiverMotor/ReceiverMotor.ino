@@ -2,14 +2,17 @@
 #include <SPI.h>
 #include "RF24.h"
 
-//Servo myservo;
-//const int green = 6;
-//SCK -> 13//MISO -> 12//MOSI -> 11//CSN -> 7//CE -> 8
+//SCK  -> 13
+//MISO -> 12
+//MOSI -> 11
+//CSN  ->  7
+//CE   ->  8
 RF24 radio(8,7);
 const uint64_t pipe = 0xE8E8F0F0E1LL;
 //int msg[1];
 int xSpeed=0;
-
+int xSpeed_Telemetry=0;
+int SteeringAngle_Telemetry;
 //-------------------------------------
 // Engine 1 
 //-------------------------------------
@@ -27,22 +30,27 @@ int servoPin = 9;
 Servo Servo1; 
 //-------------------------------------
 int Joystick[2];
+boolean forward = true;
 
 
 void setup(){
-
-radio.begin();
-radio.openReadingPipe(1,pipe);
-radio.startListening();
-
+  radio.begin();
+  radio.openReadingPipe(1,pipe);
+  radio.startListening();
   pinMode(GSM1, OUTPUT);
   //pinMode(GSM2, OUTPUT);
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
-
-  Servo1.attach(servoPin); 
-  
+  Servo1.attach(servoPin);  
   Serial.begin(115200); 
+  //-------------------------------
+  // Come to life routine:
+  //-------------------------------
+  Servo1.write(0);  
+  delay(1000);
+  Servo1.write(180);
+  delay(1000);
+  Servo1.write(90);
 }
 
 void MotorControl_01(int THROTTLE, boolean forward){
@@ -70,57 +78,43 @@ void MotorControl_02(int THROTTLE, boolean forward){
 }
 */
 void loop(){
-   /*
-   // Servo Demo
-   Servo1.write(0); 
-   delay(1000);  
-   Servo1.write(90); 
-   delay(1000); 
-   Servo1.write(180); 
-   delay(1000); 
-   */
-
-if (radio.available()){
-    while (radio.available()){
-      
+if(radio.available())  {
+    while (radio.available()){      
       radio.read(&Joystick, sizeof(Joystick));
       int AxisX = Joystick[0];
       int AxisY = Joystick[1];
-       Serial.print(AxisX);
-       Serial.print(" -- " );
-       Serial.print(AxisY);
-       Serial.print("\n");
-     
-      if( AxisX >= 0 && AxisX <= 255 ){
-        int val = AxisX;
-        boolean forward = true;
-            if(val>128){
-            val = map(val, 128, 255, 20, 255);
-            xSpeed=map(val, 25, 255, 0, 100);
-            forward = false; 
+//-------------------------------------------------------------------
+//                  Car Speed Control
+//-------------------------------------------------------------------
+            if(AxisX>=128){
+              xSpeed=map(AxisX, 128, 255, 0, 255);
+              forward = false; 
             } else {
-            val = map(val, 128, 0, 20, 255); 
-            xSpeed=map(val, 25, 255, 0, 100);
-            xSpeed = -xSpeed;
-            forward = true;
+              xSpeed=map(AxisX, 0, 127, -255, 0);
+              xSpeed=-xSpeed;
+              forward = true;
             }
-        MotorControl_01(val, forward);
-        Serial.print(xSpeed);
+        MotorControl_01(xSpeed, forward); 
+//-------------------------------------------------------------------
+//                   Steering Control  
+//-------------------------------------------------------------------        
+        int SteeringValue = map(AxisY-128, -128, 128, 0, 180);
+        Servo1.write(SteeringValue);  
+        //------------------------------------------------------------
+        if(forward){
+                xSpeed_Telemetry=map(xSpeed, 0, 255, 0, 100);
+                xSpeed_Telemetry=-xSpeed_Telemetry;
+        } else {
+                xSpeed_Telemetry=map(xSpeed, 0, 255, 0, 100);
+        }
+        SteeringAngle_Telemetry=map(SteeringValue, 0, 180, -90, 90);
+        Serial.print(xSpeed_Telemetry); 
+        Serial.print(" -- " );  
+        Serial.print(SteeringAngle_Telemetry);
         Serial.print("\n");
-      } else { }
-      
-        int val2=AxisY-128;;
-        int SteeringValue = map(val2, -128, 128, 0, 180);
-        Serial.print(SteeringValue);
-        Serial.print("\n");
-        Servo1.write(SteeringValue);
-    
-    
     }
 } else {
-  //Serial.print("No Radio");
-  //Serial.print("\n");
+ Serial.print("0");
 }
 delay(10);
-
 }
